@@ -1,0 +1,76 @@
+<!-- Fond cliquable : ferme la palette -->
+<div class="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4 pt-[12vh]" (click)="close()">
+  <!-- stopPropagation : un clic dans la boîte ne doit pas fermer la palette -->
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-label="Recherche"
+    class="card w-full max-w-xl overflow-hidden shadow-2xl"
+    (click)="$event.stopPropagation()"
+    (keydown)="onKeydown($event)"
+  >
+    <!-- Champ de saisie -->
+    <div class="flex items-center gap-3 border-b border-line px-4">
+      <app-icon name="search" class="text-muted" />
+      <input
+        #field
+        type="text"
+        autocomplete="off"
+        placeholder="Rechercher des pages, membres, projets..."
+        class="h-14 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="palette-list"
+        [attr.aria-activedescendant]="'palette-opt-' + activeIndex()"
+        [value]="query()"
+        (input)="onInput($any($event.target).value)"
+      />
+      <kbd class="kbd">Esc</kbd>
+    </div>
+
+    <!-- Résultats -->
+    <div id="palette-list" role="listbox" class="max-h-[50vh] overflow-y-auto p-2">
+      @if (loading()) {
+        <!-- Squelette pendant la "recherche" simulée -->
+        <div class="space-y-2 p-2" aria-live="polite" aria-label="Searching">
+          @for (n of [1, 2, 3]; track n) {
+            <div class="flex items-center gap-3">
+              <div class="size-8 animate-pulse rounded-lg bg-surface-2"></div>
+              <div class="h-3 flex-1 animate-pulse rounded bg-surface-2"></div>
+            </div>
+          }
+        </div>
+      } @else if (groups().length === 0) {
+        <p class="px-3 py-10 text-center text-sm text-muted">Aucun résultat pour « {{ query() }} ».</p>
+      } @else {
+        @for (group of groups(); track group.label) {
+          <p class="px-3 pb-1 pt-2 text-xs font-medium text-muted">{{ group.label }}</p>
+          @for (item of group.items; track item.id) {
+            <button
+              type="button"
+              role="option"
+              class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm"
+              [id]="'palette-opt-' + indexOf(item)"
+              [attr.aria-selected]="indexOf(item) === activeIndex()"
+              [class]="indexOf(item) === activeIndex() ? 'bg-primary/20' : ''"
+              (mouseenter)="activeIndex.set(indexOf(item))"
+              (click)="select(item)"
+            >
+              <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted">
+                <app-icon [name]="item.icon" [size]="16" />
+              </span>
+              <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
+              <span class="shrink-0 text-xs text-muted">{{ item.hint }}</span>
+            </button>
+          }
+        }
+      }
+    </div>
+
+    <!-- Rappel des raccourcis -->
+    <div class="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs text-muted">
+      <span class="flex items-center gap-1.5"><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> Naviguer</span>
+      <span class="flex items-center gap-1.5"><kbd class="kbd">↵</kbd> Ouvrir</span>
+    </div>
+  </div>
+</div>

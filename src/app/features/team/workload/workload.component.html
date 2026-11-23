@@ -1,0 +1,87 @@
+<section aria-label="Chiffres clés" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <app-stat-card title="Nombre de membres" [value]="stats().total" />
+  <app-stat-card title="Surcharge" [value]="stats().over" />
+  <app-stat-card title="Dans les objectifs" [value]="stats().target" />
+  <app-stat-card title="Sous-utilisés" [value]="stats().under" />
+</section>
+
+<app-panel title="Charge de l’équipe">
+  <div class="flex flex-wrap items-center gap-3 px-6 py-4">
+    <app-search-field placeholder="Rechercher" [(value)]="query" />
+
+    <button type="button" class="pill-btn" [attr.aria-expanded]="showFilters()" (click)="showFilters.set(!showFilters())">
+      <app-icon name="filter" class="text-primary-strong" /> Filtrer
+      @if (activeFilters() > 0) {
+        <span class="grid size-5 place-items-center rounded-full bg-primary-strong text-[11px] text-surface">{{ activeFilters() }}</span>
+      }
+    </button>
+
+    <div class="ml-auto">
+      <button type="button" class="circle-btn-fill" aria-label="Ajouter un membre" title="Ajouter un membre" (click)="creating.set(true)">
+        <app-icon name="plus" [size]="22" />
+      </button>
+    </div>
+  </div>
+
+  @if (showFilters()) {
+    <div class="flex flex-wrap items-center gap-2 px-6 pb-4">
+      <app-filter-select label="Département" [options]="departments" [(value)]="department" />
+      <app-filter-select label="Charge" [options]="loads" [(value)]="load" />
+      @if (activeFilters() > 0) {
+        <button type="button" class="text-sm font-medium text-primary-strong hover:underline" (click)="clearFilters()">Effacer les filtres</button>
+      }
+    </div>
+  }
+
+  <app-data-table [columns]="columns" [rows]="rows()" [rowId]="rowId" itemLabel="Membre" (rowClick)="selected.set($event)">
+    <ng-template appCell="name" let-row>
+      <span class="flex items-center gap-3">
+        <app-avatar [name]="row.name" [gender]="row.gender" />
+        <span class="min-w-0"><span class="block font-medium">{{ row.name }}</span><span class="block text-xs text-muted">{{ row.role }}</span></span>
+      </span>
+    </ng-template>
+
+    <!-- Barre de charge : largeur plafonnée à 100 %, couleur selon la règle métier (workload.ts) -->
+    <ng-template appCell="workload" let-row>
+      <div class="w-56">
+        <div class="h-1.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" [attr.aria-valuenow]="percent(row)"
+             aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'Charge de travail de ' + row.name">
+          <div class="h-full rounded-full" [class]="barClass(row)" [style.width.%]="barWidth(row)"></div>
+        </div>
+        <div class="mt-1.5 flex justify-between text-xs">
+          <span [class]="isOver(row) ? 'text-danger' : ''">{{ row.loggedHours }}/{{ row.capacityHours }}h</span>
+          <span [class]="isOver(row) ? 'text-danger' : 'text-muted'">{{ percent(row) }}%</span>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template appCell="task" let-row>
+      @if (row.task; as t) {
+        @if (taskMetaFor(t); as meta) {
+          <span class="flex items-center gap-2">
+            <app-icon [name]="meta.icon" [size]="16" [class]="meta.cls" />
+            <span class="max-w-[260px] truncate">{{ t.title }}</span>
+          </span>
+        }
+      } @else {
+        <span class="text-muted">Aucune tâche active</span>
+      }
+    </ng-template>
+
+    <ng-template appCell="department" let-row>{{ row.department }}</ng-template>
+
+    <ng-template appCell="actions" let-row>
+      <button type="button" class="grid size-8 place-items-center rounded-lg text-muted hover:bg-primary/20 hover:text-primary-strong"
+              [attr.aria-label]="'Ouvrir les détails de ' + row.name" (click)="selected.set(row); $event.stopPropagation()">
+        <app-icon name="moreVertical" [size]="18" />
+      </button>
+    </ng-template>
+  </app-data-table>
+</app-panel>
+
+@if (creating()) {
+  <app-employee-create-modal (closed)="creating.set(false)" />
+}
+@if (selected(); as employee) {
+  <app-employee-drawer [employee]="employee" (closed)="selected.set(null)" (removed)="remove($event)" />
+}

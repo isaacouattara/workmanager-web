@@ -1,0 +1,97 @@
+<!-- ============ 1. Chiffres clés ============ -->
+<section aria-label="Chiffres clés" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <app-stat-card title="Nombre d’employés" [value]="stats().total" delta="+2" trend="up" note="Hausse par rapport au mois dernier" />
+  <app-stat-card title="Employés actifs" [value]="stats().active" delta="-2" trend="down" note="Baisse par rapport à hier" />
+  <app-stat-card title="Nombre de départements" [value]="stats().departments" delta="+1" trend="up" note="Hausse par rapport à l’année dernière" />
+  <app-stat-card title="Ancienneté moyenne" [value]="stats().tenure" unit="ans" delta="+1.2%" trend="up" note="Hausse par rapport à l’année dernière" />
+</section>
+
+<!-- ============ 2. Liste ============ -->
+<app-panel title="Liste des employés">
+  <!-- Barre d'outils -->
+  <div class="flex flex-wrap items-center gap-3 px-6 py-4">
+    <app-search-field placeholder="Rechercher" [(value)]="query" />
+
+    <button type="button" class="pill-btn" role="switch" [attr.aria-checked]="unverifiedOnly()"
+            (click)="unverifiedOnly.set(!unverifiedOnly())">
+      <span class="relative h-5 w-8 rounded-full transition-colors" [class]="unverifiedOnly() ? 'bg-primary-strong' : 'bg-line'" aria-hidden="true">
+        <span class="absolute left-0.5 top-0.5 size-4 rounded-full bg-surface shadow transition-transform"
+              [class]="unverifiedOnly() ? 'translate-x-3' : ''"></span>
+      </span>
+      Non vérifiés
+    </button>
+
+    <button type="button" class="pill-btn" [attr.aria-expanded]="showFilters()" (click)="showFilters.set(!showFilters())">
+      <app-icon name="filter" class="text-primary-strong" /> Filtrer
+      @if (activeFilters() > 0) {
+        <span class="grid size-5 place-items-center rounded-full bg-primary-strong text-[11px] text-surface">{{ activeFilters() }}</span>
+      }
+    </button>
+
+    <div class="ml-auto flex items-center gap-2">
+      <button type="button" class="circle-btn disabled:opacity-40" disabled aria-label="Importer (bientôt disponible)" title="Importer (bientôt disponible)">
+        <app-icon name="download" />
+      </button>
+      <button type="button" class="circle-btn" aria-label="Exporter vers CSV" title="Exporter vers CSV" (click)="exportCsv()">
+        <app-icon name="upload" />
+      </button>
+      <button type="button" class="circle-btn-fill" aria-label="Ajouter un employé" title="Ajouter un employé" (click)="creating.set(true)">
+        <app-icon name="plus" [size]="22" />
+      </button>
+    </div>
+  </div>
+
+  @if (showFilters()) {
+    <div class="flex flex-wrap items-center gap-2 px-6 pb-4">
+      <app-filter-select label="Département" [options]="departments" [(value)]="department" />
+      <app-filter-select label="Statut" [options]="statuses" [(value)]="status" />
+      @if (activeFilters() > 0) {
+        <button type="button" class="text-sm font-medium text-primary-strong hover:underline" (click)="clearFilters()">Effacer les filtres</button>
+      }
+    </div>
+  }
+
+  <!-- Tableau générique : seuls les rendus de cellules sont propres à cette page -->
+  <app-data-table [columns]="columns" [rows]="rows()" [rowId]="rowId" itemLabel="Membre" (rowClick)="selected.set($event)">
+    <ng-template appCell="name" let-row>
+      <span class="flex items-center gap-3">
+        <app-avatar [name]="row.name" [gender]="row.gender" />
+        <span class="font-medium">{{ row.name }}</span>
+      </span>
+    </ng-template>
+
+    <ng-template appCell="email" let-row>
+      <span class="flex items-center gap-2.5">
+        <app-icon [name]="row.verified ? 'verified' : 'alert'" [size]="18" [class]="row.verified ? 'text-success' : 'text-danger'" />
+        {{ row.email }}
+      </span>
+    </ng-template>
+
+    <ng-template appCell="department" let-row>
+      <span class="flex items-center gap-2.5"><span class="size-2.5 rounded-full" [class]="departmentDotFor(row)"></span>{{ row.department }}</span>
+    </ng-template>
+
+    <ng-template appCell="status" let-row>
+      @if (statusMetaFor(row); as meta) {
+        <app-badge [tone]="meta.tone" [icon]="meta.icon">{{ meta.label }}</app-badge>
+      }
+    </ng-template>
+
+    <ng-template appCell="joiningDate" let-row>{{ row.joiningDate | date: 'MMM, d y' }}</ng-template>
+
+    <ng-template appCell="actions" let-row>
+      <button type="button" class="grid size-8 place-items-center rounded-lg text-muted hover:bg-primary/20 hover:text-primary-strong"
+              [attr.aria-label]="'Open details of ' + row.name" (click)="selected.set(row); $event.stopPropagation()">
+        <app-icon name="moreVertical" [size]="18" />
+      </button>
+    </ng-template>
+  </app-data-table>
+</app-panel>
+
+<!-- ============ 3. Modal de création + tiroir de détails ============ -->
+@if (creating()) {
+  <app-employee-create-modal (closed)="creating.set(false)" />
+}
+@if (selected(); as employee) {
+  <app-employee-drawer [employee]="employee" (closed)="selected.set(null)" (removed)="remove($event)" />
+}

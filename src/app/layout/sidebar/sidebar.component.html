@@ -1,0 +1,164 @@
+<!-- Voile derrière le drawer (mobile/tablette uniquement) -->
+@if (layout.mobileOpen()) {
+  <div class="fixed inset-0 z-40 bg-black/50 lg:hidden" aria-hidden="true" (click)="layout.closeMobile()"></div>
+}
+
+<!-- h-dvh : la sidebar a TOUJOURS la hauteur de l'écran, seul le menu (zone 2) défile. -->
+<aside
+  class="group/sb fixed inset-y-0 left-0 z-50 flex h-dvh w-[260px] flex-col border-r border-line bg-surface transition-[transform,width,visibility] duration-200
+         max-lg:data-[drawer=closed]:invisible max-lg:data-[drawer=closed]:-translate-x-full
+         lg:relative lg:w-[232px] data-[collapsed=true]:lg:w-[60px]"
+  [attr.data-collapsed]="layout.collapsed()"
+  [attr.data-drawer]="layout.mobileOpen() ? 'open' : 'closed'"
+  aria-label="Main navigation"
+>
+  <!-- ============ 1. HEADER : logo + bouton plier/déplier ============ -->
+  <div class="group/logo relative flex h-14 shrink-0 items-center px-4">
+    <a
+      routerLink="/dashboard"
+      aria-label="WorkManager"
+      class="flex min-w-0 items-center gap-2.5 transition-opacity
+             group-data-[collapsed=true]/sb:lg:group-hover/logo:opacity-0
+             group-data-[collapsed=true]/sb:lg:group-focus-within/logo:opacity-0"
+    >
+      <app-logo [size]="28" />
+      <span [class]="labelCls + ' text-sm font-semibold tracking-tight'">WorkManager</span>
+    </a>
+
+    <!-- En mode réduit, le bouton n'apparaît qu'au survol du logo, exactement à sa place. -->
+    <button
+      type="button"
+      (click)="layout.toggleSidebar()"
+      [attr.aria-label]="layout.collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+      class="ml-auto grid size-7 place-items-center rounded-lg text-muted transition hover:bg-primary/20 hover:text-primary-strong
+             group-data-[collapsed=true]/sb:lg:absolute group-data-[collapsed=true]/sb:lg:left-4 group-data-[collapsed=true]/sb:lg:ml-0
+             group-data-[collapsed=true]/sb:lg:opacity-0 group-data-[collapsed=true]/sb:lg:group-hover/logo:opacity-100 focus-visible:opacity-100"
+    >
+      <app-icon name="panelLeft" [size]="17" />
+    </button>
+  </div>
+
+  <!-- Recherche : ouvre la palette de commandes (⌘K) -->
+  <div class="shrink-0 px-2.5 pb-2.5">
+    <button
+      type="button"
+      (click)="layout.openSearch()"
+      aria-label="Search"
+      appTooltip="Search"
+      [tooltipEnabled]="layout.collapsed()"
+      class="flex h-9 w-full items-center gap-2 rounded-lg border border-line bg-surface-2/60 px-2.5 text-[13px] text-muted transition-colors hover:border-primary hover:bg-primary/15 hover:text-primary-strong
+             group-data-[collapsed=true]/sb:lg:justify-center group-data-[collapsed=true]/sb:lg:px-0"
+    >
+      <app-icon name="search" [size]="16" />
+      <span [class]="labelCls + ' flex-1 text-left'">Rechercher...</span>
+      <span class="flex gap-1 group-data-[collapsed=true]/sb:lg:hidden" aria-hidden="true">
+        <kbd class="kbd">⌘</kbd><kbd class="kbd">K</kbd>
+      </span>
+    </button>
+  </div>
+
+  <!-- ============ 2. MENU PRINCIPAL : seule zone qui défile (scrollbar fine) ============ -->
+  <nav class="scroll-thin min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-2.5" aria-label="Primary">
+    <a [routerLink]="'/' + top.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }"
+       [class]="rowCls" [appTooltip]="top.label" [tooltipEnabled]="layout.collapsed()">
+      <app-icon [name]="top.icon" [size]="17" />
+      <span [class]="labelCls">{{ top.label }}</span>
+    </a>
+
+    @for (group of groups; track group.id) {
+      <div>
+        <button
+          type="button"
+          [class]="rowCls"
+          [class.is-active]="activeGroupId() === group.id && !isGroupOpen(group.id)"
+          [attr.aria-expanded]="isGroupOpen(group.id)"
+          [appTooltip]="group.label"
+          [tooltipEnabled]="layout.collapsed()"
+          (click)="onGroupClick(group.id)"
+        >
+          <app-icon [name]="group.icon" [size]="17" />
+          <span [class]="labelCls + ' flex-1 text-left'">{{ group.label }}</span>
+          <app-icon
+            name="chevronDown"
+            [size]="15"
+            class="text-muted transition-transform group-data-[collapsed=true]/sb:lg:hidden"
+            [class]="isGroupOpen(group.id) ? 'rotate-180' : ''"
+          />
+        </button>
+
+        <!-- Sous-liens : masqués en mode réduit (desktop) -->
+        @if (isGroupOpen(group.id)) {
+          <ul class="ml-[18px] mt-0.5 space-y-0.5 border-l border-line group-data-[collapsed=true]/sb:lg:hidden">
+            @for (item of group.items; track item.path) {
+              <li>
+                <a [routerLink]="'/' + item.path" routerLinkActive="is-active"
+                   [routerLinkActiveOptions]="{ exact: true }" [class]="subCls">{{ item.label }}</a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+  </nav>
+
+  <!-- ============ 3. FOOTER : notifications, réglages, thème, compte ============ -->
+  <div class="relative shrink-0 space-y-0.5 border-t border-line p-2.5" #footerRoot>
+    @for (link of footerLinks; track link.path) {
+      <a [routerLink]="'/' + link.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }"
+         [class]="rowCls" [appTooltip]="link.label" [tooltipEnabled]="layout.collapsed()">
+        <app-icon [name]="link.icon" [size]="17" />
+        <span [class]="labelCls">{{ link.label }}</span>
+      </a>
+    }
+
+    <!-- Bascule clair/sombre -->
+    <button type="button" role="switch" [attr.aria-checked]="theme.isDark()" [class]="rowCls"
+            [appTooltip]="theme.isDark() ? 'Mode clair' : 'Mode sombre'" [tooltipEnabled]="layout.collapsed()"
+            (click)="theme.toggle()">
+      <app-icon [name]="theme.isDark() ? 'moon' : 'sun'" [size]="17" />
+      <span [class]="labelCls + ' flex-1 text-left'">Mode sombre</span>
+      <span class="relative h-[18px] w-8 shrink-0 rounded-full transition-colors group-data-[collapsed=true]/sb:lg:hidden"
+            [class]="theme.isDark() ? 'bg-primary-strong' : 'bg-line'" aria-hidden="true">
+        <span class="absolute left-0.5 top-0.5 size-3.5 rounded-full bg-surface shadow transition-transform"
+              [class]="theme.isDark() ? 'translate-x-3.5' : ''"></span>
+      </span>
+    </button>
+
+    <!-- Carte utilisateur : ouvre le menu à côté de la sidebar -->
+    @if (auth.user(); as user) {
+      <button
+        #userBtn
+        type="button"
+        class="mt-1 flex w-full items-center gap-2.5 rounded-lg border border-line bg-surface-2/50 p-1.5 text-left transition-colors hover:border-primary hover:bg-primary/15
+               group-data-[collapsed=true]/sb:lg:justify-center group-data-[collapsed=true]/sb:lg:border-transparent group-data-[collapsed=true]/sb:lg:bg-transparent"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="menuPos() !== null"
+        [appTooltip]="user.displayName"
+        [tooltipEnabled]="layout.collapsed() && menuPos() === null"
+        (click)="toggleMenu(userBtn)"
+      >
+        <app-avatar [name]="user.displayName" />
+        <span class="min-w-0 flex-1 group-data-[collapsed=true]/sb:lg:hidden">
+          <span class="block truncate text-[13px] font-medium">{{ user.displayName }}</span>
+          <span class="block truncate text-[11px] text-muted">{{ user.role }}</span>
+        </span>
+        <app-icon name="chevronsUpDown" [size]="15" class="text-muted group-data-[collapsed=true]/sb:lg:hidden" />
+      </button>
+
+      @if (menuPos(); as pos) {
+        <div role="menu" class="fixed z-[70] w-56 rounded-xl border border-line bg-surface p-1.5 shadow-xl animate-pop"
+             [style.left.px]="pos.left" [style.bottom.px]="pos.bottom">
+          <div class="px-3 py-2">
+            <p class="truncate text-[13px] font-medium">{{ user.displayName }}</p>
+            <p class="truncate text-xs text-muted">{{ user.email }}</p>
+          </div>
+          <div class="my-1 h-px bg-line"></div>
+          <button type="button" role="menuitem" (click)="signOut()"
+                  class="flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] text-danger transition-colors hover:bg-danger/10">
+            <app-icon name="logout" [size]="16" /> Se déconnecter
+          </button>
+        </div>
+      }
+    }
+  </div>
+</aside>

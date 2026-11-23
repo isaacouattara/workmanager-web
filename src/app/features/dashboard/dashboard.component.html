@@ -1,0 +1,115 @@
+<!-- ============ 1. Chiffres clés ============ -->
+<section aria-label="Chiffres clés" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  @for (s of stats(); track s.title) {
+    <app-stat-card [title]="s.title" [value]="s.value" [unit]="s.unit ?? ''" [delta]="s.delta" [trend]="s.trend" [note]="s.note" />
+  }
+</section>
+
+<!-- ============ 2. Tableau des tâches ============ -->
+<app-panel title="Tableau des projets">
+  <!-- Barre d'outils : vues, recherche, filtre, ajout -->
+  <div class="flex flex-wrap items-center gap-3 px-6 py-4">
+    <div role="tablist" aria-label="Modes d’affichage" class="flex max-w-full overflow-x-auto rounded-full bg-surface-2 p-1">
+      @for (v of views; track v.id) {
+        <button type="button" role="tab" [attr.aria-selected]="view() === v.id" (click)="view.set(v.id)"
+                class="flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors"
+                [class]="view() === v.id ? 'bg-primary text-on-primary' : 'text-muted hover:text-primary-strong'">
+          <app-icon [name]="v.icon" [size]="16" /> {{ v.label }}
+        </button>
+      }
+    </div>
+
+    <app-search-field placeholder="Rechercher une tâche" [(value)]="query" />
+
+    <button type="button" class="pill-btn" [attr.aria-expanded]="showFilters()" (click)="showFilters.set(!showFilters())">
+      <app-icon name="filter" class="text-primary-strong" /> Filtrer
+      @if (priority()) {
+        <span class="grid size-5 place-items-center rounded-full bg-primary-strong text-[11px] text-surface">1</span>
+      }
+    </button>
+
+    <button type="button" class="circle-btn-fill ml-auto" aria-label="Ajouter une tâche" title="Ajouter une tâche" (click)="creating.set(true)">
+      <app-icon name="plus" [size]="22" />
+    </button>
+  </div>
+
+  @if (showFilters()) {
+    <div class="flex flex-wrap items-center gap-2 px-6 pb-4">
+      <app-filter-select label="Priorité" [options]="priorityOptions" [(value)]="priority" />
+      @if (priority()) {
+        <button type="button" class="text-sm font-medium text-primary-strong hover:underline" (click)="priority.set('')">Effacer les filtres</button>
+      }
+    </div>
+  }
+
+  <div class="border-t border-line p-6">
+    @switch (view()) {
+      @case ('kanban') {
+        @if (filtering()) {
+          <p class="mb-4 text-xs text-muted">Le glisser-déposer est suspendu lorsqu’un filtre est actif.</p>
+        }
+        <!-- cdkDropListGroup : permet de glisser une carte d'une colonne à l'autre -->
+        <div cdkDropListGroup class="scroll-thin overflow-x-auto pb-2">
+          <div class="grid auto-cols-[290px] grid-flow-col gap-4 xl:grid-flow-row xl:grid-cols-4">
+            @for (col of visibleColumns(); track col.id) {
+              <section class="flex flex-col gap-3" [attr.aria-label]="col.label">
+                <header class="flex items-center justify-between">
+                  <span class="pill gap-2 px-3 py-1.5 text-sm" [class]="columnMetaFor(col).pill">
+                    <app-icon [name]="columnMetaFor(col).icon" [size]="16" />
+                    {{ col.label }}
+                    <span class="rounded-full bg-ink/10 px-1.5 text-xs">{{ col.tasks.length }}</span>
+                  </span>
+                </header>
+
+                <div cdkDropList [cdkDropListData]="col.tasks" [cdkDropListDisabled]="filtering()"
+                     (cdkDropListDropped)="drop($event)" class="flex min-h-20 flex-col gap-3">
+                  @for (task of col.tasks; track task.id) {
+                    <article cdkDrag [cdkDragDisabled]="filtering()" tabindex="0"
+                             class="card cursor-pointer p-4 transition-colors hover:border-primary"
+                             (click)="selected.set(task)" (keydown.enter)="selected.set(task)">
+                      <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-1.5 text-xs text-muted"><app-icon name="link" [size]="14" />{{ task.key }}</span>
+                        <app-badge [tone]="priorityMetaFor(task).tone" icon="flag">{{ priorityMetaFor(task).label }}</app-badge>
+                      </div>
+                      <h3 class="mt-3 text-[15px] font-semibold leading-snug">{{ task.title }}</h3>
+                      <p class="text-sm text-muted">{{ task.project }}</p>
+                      <p class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
+                        <app-icon name="calendar" [size]="14" /> Échéance : {{ task.dueDate | date: 'MMMM d, yy' }}
+                      </p>
+                      <footer class="mt-3 flex items-center justify-between border-t border-line pt-3 text-xs text-muted">
+                        <span class="flex -space-x-2">
+                          @for (person of task.assignees; track person.name) {
+                            <app-avatar [name]="person.name" [gender]="person.gender" size="sm" class="ring-2 ring-surface" />
+                          }
+                        </span>
+                        <span class="flex items-center gap-1"><app-icon name="message" [size]="14" />{{ task.comments }}</span>
+                        <time [attr.datetime]="task.createdAt">{{ task.createdAt | date: 'MMM dd, y' }}</time>
+                      </footer>
+                    </article>
+                  }
+                </div>
+
+                <button type="button" class="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-line text-sm transition-colors hover:border-primary hover:bg-primary/15 hover:text-primary-strong"
+                        (click)="creating.set(true)">
+                  <app-icon name="plus" [size]="16" /> Nouvelle tâche
+                </button>
+              </section>
+            }
+          </div>
+        </div>
+      }
+      @default {
+        <div class="grid place-items-center py-16 text-sm text-muted">La vue {{ viewLabel() }} arrive prochainement.</div>
+      }
+    }
+  </div>
+</app-panel>
+
+<!-- ============ 3. Modal de création + tiroir de détails ============ -->
+@if (creating()) {
+  <app-task-create-modal [projects]="projects()" [people]="people()" [columns]="columns()" [nextNumber]="nextNumber()"
+                         (created)="addTask($event)" (closed)="creating.set(false)" />
+}
+@if (selected(); as task) {
+  <app-task-drawer [task]="task" [columnLabel]="columnLabelOf(task)" (closed)="selected.set(null)" (removed)="removeTask($event)" />
+}

@@ -1,0 +1,191 @@
+/*
+ * ============================================================
+ *  Styles globaux – Tailwind v4 + design tokens
+ *  Palette : base sauge #A8C7A5 (primary). Tout le reste en dérive.
+ *  On utilise des couleurs SÉMANTIQUES (bg-primary, text-muted…) :
+ *  jamais de couleur brute dans les pages -> thèmes clair/sombre homogènes.
+ * ============================================================
+ */
+@import "tailwindcss";
+
+/* Mode sombre piloté par la classe `.dark` sur <html> (voir ThemeService). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- 1. Tokens : valeurs selon le thème ---------- */
+:root {
+  /* Neutres teintés de vert (plus de blanc/noir purs) */
+  --app: #eef2ec;        /* fond de l'application */
+  --surface: #fafbf9;    /* cartes, sidebar, champs */
+  --surface-2: #e7ede4;  /* champs, pastilles, survols neutres */
+  --line: #d8e1d5;       /* bordures */
+  --ink: #1d2a1d;       /* texte principal */
+  --muted: #66755f;      /* texte secondaire */
+
+  /* Couleurs de marque */
+  --primary: #a8c7a5;        /* BASE du thème */
+  --primary-strong: #46703f; /* texte/icônes d'accent sur fond clair */
+  --on-primary: #172616;     /* texte posé sur --primary */
+  --secondary: #dccfa6;      /* sable */
+  --on-secondary: #2e2712;
+  --tertiary: #e4ae92;       /* argile */
+  --on-tertiary: #3a2012;
+
+  /* États */
+  --success: #3d8c52;
+  --warning: #c27a1f;
+  --danger: #d0453b;
+  --info: #3d7dbd;
+  color-scheme: light;
+}
+
+.dark {
+  --app: #0e1410;
+  --surface: #151c17;
+  --surface-2: #1e2822;
+  --line: #2a362e;
+  --ink: #e6ede4;
+  --muted: #92a08e;
+
+  --primary: #a8c7a5;
+  --primary-strong: #bcd9b9;
+  --on-primary: #12200f;
+  --secondary: #bfb184;
+  --on-secondary: #221d0c;
+  --tertiary: #d29b80;
+  --on-tertiary: #2c180c;
+
+  --success: #5cc078;
+  --warning: #e3a04f;
+  --danger: #f0766c;
+  --info: #6fa6e0;
+  color-scheme: dark;
+}
+
+/* ---------- 2. Tokens exposés comme utilitaires Tailwind ---------- */
+@theme inline {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-app: var(--app);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+}
+
+@layer base {
+  body {
+    @apply bg-app font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary-strong);
+    outline-offset: 2px;
+  }
+}
+
+/* ---------- 3. Briques réutilisables (garantissent l'homogénéité) ---------- */
+@utility card {
+  @apply rounded-2xl border border-line bg-surface;
+}
+
+/* Petite pastille d'état (statut, priorité…) */
+@utility pill {
+  @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+}
+
+@utility btn {
+  @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+}
+/* Action principale : fond sauge */
+@utility btn-primary {
+  @apply btn bg-primary text-on-primary hover:brightness-95;
+}
+/* Action secondaire : fond neutre */
+@utility btn-soft {
+  @apply btn bg-surface-2 text-ink hover:bg-line;
+}
+
+/* Bouton "pastille" des barres d'outils (Filter, Previous, Next…) */
+@utility pill-btn {
+  @apply inline-flex h-11 items-center gap-2 rounded-full border border-line bg-surface-2 px-5 text-sm font-medium text-ink transition-colors hover:border-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Bouton rond contour primary (import / export) et rond plein (ajouter) */
+@utility circle-btn {
+  @apply grid size-11 shrink-0 place-items-center rounded-full border border-primary-strong/60 text-primary-strong transition-colors hover:bg-primary/20;
+}
+@utility circle-btn-fill {
+  @apply grid size-11 shrink-0 place-items-center rounded-full bg-primary text-on-primary transition hover:brightness-95;
+}
+
+/* Bouton carré avec icône */
+@utility icon-btn {
+  @apply grid size-9 place-items-center rounded-lg border border-line bg-surface text-muted transition-colors hover:border-primary hover:bg-primary/15 hover:text-primary-strong;
+}
+
+/* Champ de formulaire "conteneur" (login) : l'<input> est posé à l'intérieur */
+@utility field {
+  @apply flex h-14 items-center gap-3 rounded-2xl border border-line bg-surface px-4 transition focus-within:border-primary-strong focus-within:ring-4 focus-within:ring-primary/30;
+}
+/* Champ simple (formulaires des modals) */
+@utility input-base {
+  @apply h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-primary-strong focus:ring-4 focus:ring-primary/30;
+}
+@utility field-error {
+  border-color: var(--color-danger) !important;
+}
+
+@utility kbd {
+  @apply grid h-5 min-w-5 place-items-center rounded-md bg-surface-2 px-1 text-[11px] font-medium text-muted;
+}
+
+/* Scrollbar fine et discrète */
+@utility scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Animations d'apparition (modal, drawer) */
+@keyframes wm-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes wm-slide { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes wm-fade { from { opacity: 0; } to { opacity: 1; } }
+@utility animate-pop { animation: wm-pop 180ms ease-out; }
+@utility animate-slide { animation: wm-slide 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@utility animate-fade { animation: wm-fade 150ms ease-out; }
+
+/* ---------- 4. Glisser-déposer (Angular CDK) ---------- */
+.cdk-drag-preview {
+  box-sizing: border-box;
+  box-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.3);
+  transform: rotate(2deg);
+}
+.cdk-drag-placeholder { opacity: 0.35; }
+.cdk-drag-animating { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

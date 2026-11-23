@@ -1,0 +1,80 @@
+<!-- ============ Tableau ============ -->
+<div class="scroll-thin overflow-x-auto">
+  <table class="w-full min-w-[720px] border-collapse text-left text-sm">
+    <thead>
+      <tr class="border-y border-line bg-surface-2/50">
+        @if (selectable()) {
+          <th class="w-12 px-4 py-3.5">
+            <input type="checkbox" class="size-4 cursor-pointer rounded accent-primary-strong"
+                   aria-label="Select all rows on this page"
+                   [checked]="allSelected()" (change)="toggleAll()" />
+          </th>
+        }
+        @for (col of columns(); track col.key) {
+          <th scope="col" class="px-4 py-3.5 text-base font-medium" [class]="col.class ?? ''" [attr.aria-sort]="ariaSort(col)">
+            @if (col.sortable) {
+              <button type="button" class="inline-flex items-center gap-2 hover:text-primary-strong" (click)="toggleSort(col)">
+                {{ col.header }}
+                <app-icon name="sort" [size]="15" [class]="sortKey() === col.key ? 'text-primary-strong' : 'text-muted'" />
+              </button>
+            } @else {
+              {{ col.header }}
+            }
+          </th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (row of pageRows(); track rowId()(row)) {
+        <tr class="cursor-pointer border-b border-line transition-colors last:border-0 hover:bg-primary/10"
+            [class]="selected().has(rowId()(row)) ? 'bg-primary/15' : ''" (click)="rowClick.emit(row)">
+          @if (selectable()) {
+            <td class="px-4 py-3" (click)="$event.stopPropagation()">
+              <input type="checkbox" class="size-4 cursor-pointer rounded accent-primary-strong"
+                     [attr.aria-label]="'Select row'" [checked]="selected().has(rowId()(row))" (change)="toggleRow(row)" />
+            </td>
+          }
+          @for (col of columns(); track col.key) {
+            <td class="px-4 py-3" [class]="col.class ?? ''">
+              @if (cellTemplate(col.key); as tpl) {
+                <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: row }" />
+              } @else {
+                {{ valueOf(row, col.key) }}
+              }
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  @if (pageRows().length === 0) {
+    <p class="px-6 py-14 text-center text-sm text-muted">No {{ itemLabel().toLowerCase() }} found.</p>
+  }
+</div>
+
+<!-- ============ Pied : compteur, taille de page, navigation ============ -->
+<div class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-6 py-4">
+  <p class="text-sm text-muted">{{ fromIndex() }} to {{ toIndex() }} of {{ sorted().length }} {{ itemLabel() }}</p>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <label class="relative inline-flex">
+      <span class="sr-only">Rows per page</span>
+      <select class="h-11 cursor-pointer appearance-none rounded-full border border-line bg-surface-2 pl-5 pr-10 text-sm font-medium transition-colors hover:border-primary hover:bg-primary/15"
+              (change)="setPageSize(+$any($event.target).value)">
+        @for (size of pageSizes(); track size) {
+          <option [value]="size" [selected]="size === pageSize()">{{ size }} rows</option>
+        }
+      </select>
+      <app-icon name="chevronDown" [size]="16" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted" />
+    </label>
+
+    <button type="button" class="pill-btn" [disabled]="page() === 0" (click)="goTo(-1)">
+      <app-icon name="chevronLeft" [size]="16" /> Previous
+    </button>
+    <button type="button" class="pill-btn" [disabled]="page() >= lastPage()" (click)="goTo(1)">
+      Next <app-icon name="chevronRight" [size]="16" />
+    </button>
+  </div>
+</div>
