@@ -1,17 +1,18 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { Observable, delay, of, tap } from 'rxjs';
-import { AuthUser, Credentials } from './auth.models';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, map, switchMap, tap } from 'rxjs';
+import { API_BASE_URL } from '../config/api.config';
+import { AuthUser, Credentials, RegistrationData } from './auth.models';
 
 const SESSION_KEY = 'wm-session';
 
 /**
- * Service d'authentification.
- * ⚠️ MODE SIMULATION : aucune requête réseau pour l'instant.
- * Pour brancher l'API, il suffit de remplacer le corps de `checkEmail` et `login`
- * par des appels `HttpClient` (voir les TODO) : aucun composant ne change.
+ * Service d'authentification connecté à l'API Spring Boot.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
+  private readonly apiBaseUrl = inject(API_BASE_URL);
   private readonly _user = signal<AuthUser | null>(this.restoreSession());
 
   /** Utilisateur courant (lecture seule pour les composants). */
@@ -23,32 +24,38 @@ export class AuthService {
     return this._user()?.token ?? null;
   }
 
-  /**
-   * Étape 1 du stepper : l'email existe-t-il ?
-   * TODO API : GET /api/auth/check-email?email=... -> { exists: boolean }
-   */
-  checkEmail(_email: string): Observable<boolean> {
-    return of(true).pipe(delay(500));
+  /** POST /auth/register -> 201 */
+  register(data: RegistrationData): Observable<void> {
+    return this.http.post<void>(`${this.apiBaseUrl}/auth/register`, data);
   }
 
-  /**
-   * Étape 2 du stepper : authentification.
-   * TODO API : POST /api/auth/login { email, password } -> { token, user }
-   */
+  /** POST /auth/login -> { accessToken }, puis GET /auth/me avec ce jeton. */
   login(credentials: Credentials): Observable<AuthUser> {
-    const local = credentials.email.split('@')[0];
-    const user: AuthUser = {
-      id: 'demo-user',
-      email: credentials.email,
-      displayName: local.charAt(0).toUpperCase() + local.slice(1),
-      role: 'Administrator',
-    };
-    return of(user).pipe(
-      delay(700),
-      tap((u) => {
-        this._user.set(u);
-        this.persistSession(u, credentials.remember);
-      }),
+    return this.http
+      .post<{ accessToken: string }>(`${this.apiBaseUrl}/auth/login`, {
+        email: credentials.email,
+        password: credentials.password,
+      })
+      .pipe(
+        switchMap(({ accessToken }) =>
+          this.http
+            .get<AuthUser>(`${this.apiBaseUrl}/auth/me`, {
+              headers: new HttpHeaders({ Authorization: `Bearer ${accessToken}` }),
+            })
+            .pipe(map((user) => ({ ...user, token: accessToken }))),
+        ),
+        tap((user) => {
+          this._user.set(user);
+          this.persistSession(user, credentials.remember);
+        }),
+      );
+  }
+
+  /** GET /auth/me -> utilisateur courant (le bearer est ajouté par l'interceptor). */
+  me(): Observable<AuthUser> {
+    return this.http.get<AuthUser>(`${this.apiBaseUrl}/auth/me`).pipe(
+      map((user) => ({ ...user, token: this.token() ?? undefined })),
+      tap((user) => this._user.set(user)),
     );
   }
 
