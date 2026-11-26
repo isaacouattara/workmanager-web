@@ -1,15 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, map, startWith } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { AutofocusDirective } from '../../../shared/directives/autofocus.directive';
 import { IconComponent } from '../../../shared/ui/icon.component';
 import { LogoComponent } from '../../../shared/ui/logo.component';
 import { strictEmail } from '../../../shared/validators/email.validator';
-
-type LoginStep = 1 | 2;
 
 /**
  * Page de connexion en 2 étapes (stepper) :
@@ -29,6 +28,38 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  // ---- Carousel ----
+  protected readonly slideDuration = 6000;
+  protected readonly paused = signal(false);
+  protected readonly current = signal(0);
+
+  protected readonly slides = [
+    {
+      title: 'dashboard',
+      before: 'Simplifiez la gestion avec notre ',
+      highlight: 'tableau de bord',
+      after: '.',
+      text: 'Simplifiez le pilotage de vos équipes et de vos projets avec une interface claire et facile à prendre en main.',
+      image: 'assets/img/auth/slide-1.png',
+    },
+    {
+      title: 'equipe',
+      before: 'Collaborez sans friction avec votre ',
+      highlight: 'équipe',
+      after: '.',
+      text: 'Invitez vos collaborateurs, répartissez les rôles et travaillez ensemble au même endroit.',
+      image: 'assets/img/auth/slide-2.png',
+    },
+    {
+      title: 'projets',
+      before: 'Suivez l’avancement de vos ',
+      highlight: 'projets',
+      after: ' en temps réel.',
+      text: 'Gardez une vue d’ensemble sur les tâches, les échéances et la progression de chaque projet.',
+      image: 'assets/img/auth/slide-3.png',
+    },
+  ];
+
   /** Un seul formulaire pour les deux étapes ; chaque étape n'en valide qu'une partie. */
   protected readonly form = this.fb.group({
     email: ['', [Validators.required, strictEmail]],
@@ -37,7 +68,13 @@ export class LoginComponent {
   });
 
   // --- État de l'UI (signals) ---
-  protected readonly step = signal<LoginStep>(1);
+  protected readonly emailValid = toSignal(
+    this.email.statusChanges.pipe(
+      startWith(null),
+      map(() => this.email.valid),
+    ),
+    { initialValue: false },
+  );
   protected readonly loading = signal(false);
   protected readonly showPassword = signal(false);
   /** Erreur renvoyée par le serveur (email inconnu, mauvais mot de passe…). */
@@ -52,7 +89,9 @@ export class LoginComponent {
 
   /** Message d'erreur lisible pour le champ email. */
   protected emailError(): string {
-    return this.email.hasError('required') ? 'Saisissez votre adresse e-mail.' : 'Saisissez une adresse e-mail valide.';
+    return this.email.hasError('required')
+      ? 'Saisissez votre adresse e-mail.'
+      : 'Saisissez une adresse e-mail valide.';
   }
 
   protected passwordError(): string {
@@ -61,33 +100,25 @@ export class LoginComponent {
       : 'Votre mot de passe doit contenir au moins 8 caractères.';
   }
 
-  /** Point d'entrée du formulaire : aiguille vers l'étape en cours. */
+  protected next(): void {
+    this.current.update((i) => (i + 1) % this.slides.length);
+  }
+  protected go(i: number): void {
+    this.current.set(i);
+  }
+
+  /** Point d'entrée du formulaire. */
   protected onSubmit(): void {
+    if (this.email.invalid) {
+      this.email.markAsTouched();
+      return;
+    }
+    if (this.password.invalid) {
+      this.password.markAsTouched();
+      return;
+    }
     this.serverError.set(null);
-    if (this.step() === 1) this.submitEmail();
-    else this.submitPassword();
-  }
-
-  protected backToEmail(): void {
-    this.serverError.set(null);
-    this.password.reset();
-    this.step.set(1);
-  }
-
-  /** Étape 1 : valide le format puis vérifie l'email (simulé). */
-  private submitEmail(): void {
-    this.email.markAsTouched();
-    if (this.email.invalid) return;
-
-    this.loading.set(true);
-    this.auth
-      .checkEmail(this.email.value)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (exists) =>
-          exists ? this.step.set(2) : this.serverError.set('Aucun compte n’est associé à cette adresse e-mail.'),
-        error: () => this.serverError.set('Une erreur est survenue. Veuillez réessayer.'),
-      });
+    this.submitPassword();
   }
 
   /** Étape 2 : connexion puis redirection vers la page demandée (ou le dashboard). */

@@ -24,7 +24,7 @@ import { IconComponent } from './icon.component';
         }
       </p>
 
-      @if (delta()) {
+      <!-- @if (delta()) {
         <p class="mt-3 flex items-center gap-2 text-sm text-muted">
           <span
             class="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold"
@@ -35,7 +35,7 @@ import { IconComponent } from './icon.component';
           </span>
           {{ note() }}
         </p>
-      }
+      } -->
     </article>
   `,
 })

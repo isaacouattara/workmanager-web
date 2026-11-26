@@ -34,8 +34,8 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
         </div>
 
         <!-- Contenu de la page courante (injecté par le router) -->
-        <main class="scroll-thin min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <div class="mx-auto flex max-w-[1500px] flex-col gap-4">
+        <main class="scroll-thin min-h-0 flex-1 overflow-y-auto ">
+          <div class="mx-auto flex max-w-[1600px] flex-col gap-4">
             <router-outlet />
           </div>
         </main>

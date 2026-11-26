@@ -4,7 +4,7 @@ export interface AuthUser {
   email: string;
   displayName: string;
   role: string;
-  /** JWT renvoyé par l'API (absent tant que le backend n'est pas branché). */
+  /** accessToken renvoyé par l'API, conservé pour les requêtes protégées. */
   token?: string;
 }
 
@@ -13,4 +13,11 @@ export interface Credentials {
   password: string;
   /** "Se souvenir de moi" : session persistante (localStorage) ou limitée à l'onglet. */
   remember: boolean;
+}
+
+export interface RegistrationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
 }
